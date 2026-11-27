@@ -1,0 +1,35 @@
+replicaCount: 2
+
+image:
+  repository: navneet2004/devops-dashboard
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+containerPort: 8080
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+serviceMonitor:
+  enabled: true
+
+  interval: 15s
+
+  scrapeTimeout: 10s
+
+  path: /metrics
+
+  namespace: ""
+
+  labels: {}

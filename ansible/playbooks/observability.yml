@@ -1,0 +1,14 @@
+---
+- name: Deploy Observability Stack
+  hosts: jenkins
+  become: yes
+
+  roles:
+    - { role: local-path-provisioner, tags: ["storage"] }
+    - { role: otel-collector, tags: ["otel"] }
+    - { role: jaeger, tags: ["jaeger"] }
+    - { role: prometheus, tags: ["prometheus"] }
+    - { role: grafana, tags: ["grafana"] }
+    - { role: elasticsearch, tags: ["elasticsearch"] }
+    - { role: kibana, tags: ["kibana"] }
+    - { role: fluent-bit, tags: ["fluent-bit"] }

@@ -1,0 +1,132 @@
+---
+- name: Update apt cache
+  become: true
+  apt:
+    update_cache: yes
+
+- name: Install Java and required packages
+  become: true
+  apt:
+    name:
+      - fontconfig
+      - openjdk-21-jre
+      - curl
+      - gnupg
+    state: present
+
+- name: Create apt keyrings directory
+  become: true
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Remove old Jenkins repository files
+  become: true
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/jenkins.list
+    - /etc/apt/sources.list.d/jenkins.sources
+
+- name: Remove old Jenkins keyring
+  become: true
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/keyrings/jenkins-keyring.gpg
+    - /tmp/jenkins.key
+
+- name: Download Jenkins 2026 signing key
+  become: true
+  get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
+    dest: /tmp/jenkins.key
+    mode: "0644"
+
+- name: Convert Jenkins key to GPG format
+  become: true
+  command:
+    cmd: gpg --dearmor --yes -o /etc/apt/keyrings/jenkins-keyring.gpg /tmp/jenkins.key
+  changed_when: true
+
+- name: Configure Jenkins repository
+  become: true
+  copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/
+
+- name: Update apt cache after adding Jenkins repository
+  become: true
+  apt:
+    update_cache: yes
+
+- name: Install Jenkins
+  become: true
+  apt:
+    name: jenkins
+    state: present
+
+- name: Enable Jenkins service
+  become: true
+  systemd:
+    name: jenkins
+    enabled: yes
+    state: started
+
+- name: Add Jenkins user to docker group
+  become: true
+  user:
+    name: jenkins
+    groups: docker
+    append: yes
+
+- name: Restart Jenkins
+  become: true
+  systemd:
+    name: jenkins
+    state: restarted
+
+- name: Wait for Jenkins to start
+  uri:
+    url: http://localhost:8080/login
+    status_code:
+      - 200
+      - 403
+  register: jenkins_status
+  retries: 30
+  delay: 10
+  until: jenkins_status.status in [200, 403]
+
+- name: Wait for initial admin password
+  become: true
+  wait_for:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+    timeout: 180
+
+- name: Read Jenkins initial admin password
+  become: true
+  slurp:
+    src: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password
+
+- name: Get Jenkins server IP
+  command: hostname -I
+  register: jenkins_ip
+  changed_when: false
+
+- name: Display Jenkins information
+  debug:
+    msg:
+      - "========================================================="
+      - " Jenkins Installation Successful"
+      - "---------------------------------------------------------"
+      - " URL              : http://{{ jenkins_ip.stdout.split()[0] }}:8080"
+      - " Username         : admin"
+      - " Initial Password : {{ jenkins_password.content | b64decode | trim }}"
+      - " Jenkins Status   : Running"
+      - "========================================================="

@@ -1,0 +1,36 @@
+---
+- import_playbook: playbooks/common.yml
+
+- import_playbook: playbooks/docker.yml
+
+- import_playbook: playbooks/containerd.yml
+
+- import_playbook: playbooks/kubernetes.yml
+
+# Create the Kubernetes cluster
+- import_playbook: playbooks/master.yml
+
+# Join worker nodes
+- import_playbook: playbooks/workers.yml
+
+# Install Jenkins (creates the jenkins user)
+- import_playbook: playbooks/jenkins.yml
+
+# Install tools on Jenkins server
+- import_playbook: playbooks/git.yml
+
+- import_playbook: playbooks/kubectl.yml
+
+- import_playbook: playbooks/trivy.yml
+
+# Configure kubeconfig for Jenkins
+- import_playbook: playbooks/kubeconfig.yml
+
+# Install Helm
+- import_playbook: playbooks/helm.yml
+
+# Install NGINX Ingress Controller
+- import_playbook: playbooks/ingress-nginx.yml
+
+# Deploy Observability Stack
+- import_playbook: playbooks/observability.yml
